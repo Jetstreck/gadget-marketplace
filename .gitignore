@@ -1,0 +1,20 @@
+# Binary files
+*.exe
+*.dll
+*.so
+*.dylib
+server
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Environment files
+.env
+
+# IDE / OS files
+.DS_Store
+.idea/
+.vscode/
+*.swp
