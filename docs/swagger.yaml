@@ -1,0 +1,236 @@
+basePath: /
+definitions:
+  models.AIRecommendRequest:
+    properties:
+      prompt:
+        type: string
+    required:
+    - prompt
+    type: object
+  models.CheckoutRequest:
+    properties:
+      product_id:
+        type: integer
+      quantity:
+        type: integer
+    required:
+    - product_id
+    - quantity
+    type: object
+  models.LoginRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  models.RegisterRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+      username:
+        type: string
+    required:
+    - email
+    - password
+    - username
+    type: object
+  models.TopUpRequest:
+    properties:
+      amount:
+        type: number
+    required:
+    - amount
+    type: object
+host: localhost:8080
+info:
+  description: RESTful API Backend Service for Gadget Marketplace built with Golang
+    Echo v4, PostgreSQL, Mailjet, and Google Gemini AI.
+  title: Gadget Marketplace REST API
+  version: "1.0"
+paths:
+  /api/v1/ai/recommend:
+    post:
+      consumes:
+      - application/json
+      description: Get AI-powered gadget recommendation from Google Gemini AI analyzing
+        real store catalog
+      parameters:
+      - description: AI Recommendation Request Payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.AIRecommendRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+      security:
+      - BearerAuth: []
+      summary: AI Gadget Recommendation
+      tags:
+      - AI Assistant
+  /api/v1/orders/checkout:
+    post:
+      consumes:
+      - application/json
+      description: Checkout gadget purchase with atomic DB transaction & email invoice
+        notification
+      parameters:
+      - description: Checkout Request Payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.CheckoutRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+      security:
+      - BearerAuth: []
+      summary: Checkout Purchase
+      tags:
+      - Orders
+  /api/v1/orders/my-orders:
+    get:
+      description: Get transaction history / booking report for logged in user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+      security:
+      - BearerAuth: []
+      summary: Get User Orders
+      tags:
+      - Orders
+  /api/v1/products:
+    get:
+      description: Retrieve all products from store catalog with optional category
+        filter
+      parameters:
+      - description: Category filter (e.g. smartphones, laptops)
+        in: query
+        name: category
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+      tags:
+      - Products
+      summary: Get Products Catalog
+  /api/v1/products/sync:
+    post:
+      description: Synchronize gadget catalog from 3rd Party DummyJSON API into database
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+      summary: Sync Products Catalog
+      tags:
+      - Products
+  /api/v1/users/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate user credentials and return JWT Token
+      parameters:
+      - description: Login Request Payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Unauthorized
+      summary: Login User
+      tags:
+      - Users
+  /api/v1/users/profile:
+    get:
+      description: Get logged in user profile and deposit balance
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Unauthorized
+      security:
+      - BearerAuth: []
+      summary: User Profile
+      tags:
+      - Users
+  /api/v1/users/register:
+    post:
+      consumes:
+      - application/json
+      description: Register a new user account with email, username, and password
+      parameters:
+      - description: Register Request Payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+        "400":
+          description: Bad Request
+      summary: Register User
+      tags:
+      - Users
+  /api/v1/users/topup:
+    post:
+      consumes:
+      - application/json
+      description: Top up user deposit balance
+      parameters:
+      - description: TopUp Request Payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.TopUpRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+      security:
+      - BearerAuth: []
+      summary: Top Up Deposit
+      tags:
+      - Users
+schemes:
+- http
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
