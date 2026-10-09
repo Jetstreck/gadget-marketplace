@@ -20,6 +20,11 @@ type Config struct {
 	JWTSecret          string
 	JWTExpirationHours int
 	DummyJSONURL       string
+	SMTPHost           string
+	SMTPPort           string
+	SMTPUser           string
+	SMTPPassword       string
+	SenderEmail        string
 }
 
 func LoadConfig() *Config {
@@ -40,6 +45,11 @@ func LoadConfig() *Config {
 		JWTSecret:          getEnv("JWT_SECRET", "gadget_marketplace_secret_key_2026"),
 		JWTExpirationHours: 24,
 		DummyJSONURL:       getEnv("DUMMYJSON_URL", "https://dummyjson.com"),
+		SMTPHost:           getEnv("SMTP_HOST", "in-v3.mailjet.com"),
+		SMTPPort:           getEnv("SMTP_PORT", "587"),
+		SMTPUser:           getEnv("SMTP_USER", ""),
+		SMTPPassword:       getEnv("SMTP_PASSWORD", ""),
+		SenderEmail:        getEnv("SENDER_EMAIL", "no-reply@gadgetmarketplace.com"),
 	}
 }
 

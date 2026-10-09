@@ -5,6 +5,7 @@ import (
 
 	"gadget-marketplace/config"
 	"gadget-marketplace/handler"
+	"gadget-marketplace/pkg/email"
 	"gadget-marketplace/repository"
 	"gadget-marketplace/router"
 	"gadget-marketplace/service"
@@ -18,13 +19,15 @@ func main() {
 
 	db := config.InitDB(cfg)
 
+	emailSvc := email.NewEmailService(cfg)
+
 	userRepo := repository.NewUserRepository(db)
 	productRepo := repository.NewProductRepository(db)
 	orderRepo := repository.NewOrderRepository(db)
 
-	userService := service.NewUserService(userRepo, cfg)
+	userService := service.NewUserService(userRepo, emailSvc, cfg)
 	productService := service.NewProductService(productRepo, cfg)
-	orderService := service.NewOrderService(orderRepo)
+	orderService := service.NewOrderService(orderRepo, emailSvc)
 
 	userHandler := handler.NewUserHandler(userService)
 	productHandler := handler.NewProductHandler(productService)

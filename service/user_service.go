@@ -2,9 +2,11 @@ package service
 
 import (
 	"errors"
+	"log"
 
 	"gadget-marketplace/config"
 	"gadget-marketplace/models"
+	"gadget-marketplace/pkg/email"
 	"gadget-marketplace/pkg/utils"
 	"gadget-marketplace/repository"
 )
@@ -18,12 +20,14 @@ type UserService interface {
 
 type userService struct {
 	userRepo repository.UserRepository
+	emailSvc email.EmailService
 	cfg      *config.Config
 }
 
-func NewUserService(userRepo repository.UserRepository, cfg *config.Config) UserService {
+func NewUserService(userRepo repository.UserRepository, emailSvc email.EmailService, cfg *config.Config) UserService {
 	return &userService{
 		userRepo: userRepo,
+		emailSvc: emailSvc,
 		cfg:      cfg,
 	}
 }
@@ -54,6 +58,14 @@ func (s *userService) Register(req *models.RegisterRequest) (*models.User, error
 
 	if err := s.userRepo.Create(user); err != nil {
 		return nil, err
+	}
+
+	if s.emailSvc != nil {
+		go func() {
+			if err := s.emailSvc.SendWelcomeEmail(user.Email, user.Username); err != nil {
+				log.Printf("Non-blocking notice: welcome email failed (%v)", err)
+			}
+		}()
 	}
 
 	return user, nil

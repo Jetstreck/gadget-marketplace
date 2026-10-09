@@ -2,8 +2,10 @@ package service
 
 import (
 	"errors"
+	"log"
 
 	"gadget-marketplace/models"
+	"gadget-marketplace/pkg/email"
 	"gadget-marketplace/repository"
 )
 
@@ -14,10 +16,14 @@ type OrderService interface {
 
 type orderService struct {
 	orderRepo repository.OrderRepository
+	emailSvc email.EmailService
 }
 
-func NewOrderService(orderRepo repository.OrderRepository) OrderService {
-	return &orderService{orderRepo: orderRepo}
+func NewOrderService(orderRepo repository.OrderRepository, emailSvc email.EmailService) OrderService {
+	return &orderService{
+		orderRepo: orderRepo,
+		emailSvc: emailSvc,
+	}
 }
 
 func (s *orderService) Checkout(userID uint, req *models.CheckoutRequest) (*models.CheckoutResponse, error) {
@@ -31,6 +37,14 @@ func (s *orderService) Checkout(userID uint, req *models.CheckoutRequest) (*mode
 	order, updatedUser, err := s.orderRepo.CreateTransaction(userID, req.ProductID, req.Quantity)
 	if err != nil {
 		return nil, err
+	}
+
+	if s.emailSvc != nil {
+		go func() {
+			if err := s.emailSvc.SendOrderInvoiceEmail(updatedUser.Email, updatedUser.Username, order.Product.Name, order.Quantity, order.TotalPrice, updatedUser.Deposit); err != nil {
+				log.Printf("Non-blocking notice: invoice email failed (%v)", err)
+			}
+		}()
 	}
 
 	return &models.CheckoutResponse{
