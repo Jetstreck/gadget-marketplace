@@ -28,10 +28,12 @@ func main() {
 	userService := service.NewUserService(userRepo, emailSvc, cfg)
 	productService := service.NewProductService(productRepo, cfg)
 	orderService := service.NewOrderService(orderRepo, emailSvc)
+	aiService := service.NewAIService(cfg)
 
 	userHandler := handler.NewUserHandler(userService)
 	productHandler := handler.NewProductHandler(productService)
 	orderHandler := handler.NewOrderHandler(orderService)
+	aiHandler := handler.NewAIHandler(aiService)
 
 	e := echo.New()
 
@@ -48,7 +50,7 @@ func main() {
 		})
 	})
 
-	router.SetupRouter(e, cfg, userHandler, productHandler, orderHandler)
+	router.SetupRouter(e, cfg, userHandler, productHandler, orderHandler, aiHandler)
 
 	e.Logger.Fatal(e.Start(":" + cfg.Port))
 }

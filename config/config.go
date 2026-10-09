@@ -25,6 +25,7 @@ type Config struct {
 	SMTPUser           string
 	SMTPPassword       string
 	SenderEmail        string
+	GeminiAPIKey       string
 }
 
 func LoadConfig() *Config {
@@ -50,6 +51,7 @@ func LoadConfig() *Config {
 		SMTPUser:           getEnv("SMTP_USER", ""),
 		SMTPPassword:       getEnv("SMTP_PASSWORD", ""),
 		SenderEmail:        getEnv("SENDER_EMAIL", "no-reply@gadgetmarketplace.com"),
+		GeminiAPIKey:       getEnv("GEMINI_API_KEY", ""),
 	}
 }
 

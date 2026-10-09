@@ -14,6 +14,7 @@ func SetupRouter(
 	userHandler *handler.UserHandler,
 	productHandler *handler.ProductHandler,
 	orderHandler *handler.OrderHandler,
+	aiHandler *handler.AIHandler,
 ) {
 	api := e.Group("/api/v1")
 
@@ -33,6 +34,9 @@ func SetupRouter(
 	orders := api.Group("/orders", middleware.JWTAuthMiddleware(cfg.JWTSecret))
 	orders.POST("/checkout", orderHandler.Checkout)
 	orders.GET("/my-orders", orderHandler.GetUserOrders)
+
+	ai := api.Group("/ai")
+	ai.POST("/recommend", aiHandler.Recommend)
 
 	api.POST("/rent-products", orderHandler.Checkout, middleware.JWTAuthMiddleware(cfg.JWTSecret))
 	api.GET("/booking-report", orderHandler.GetUserOrders, middleware.JWTAuthMiddleware(cfg.JWTSecret))
