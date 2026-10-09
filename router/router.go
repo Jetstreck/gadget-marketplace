@@ -1,11 +1,13 @@
 package router
 
 import (
+	_ "gadget-marketplace/docs"
 	"gadget-marketplace/config"
 	"gadget-marketplace/handler"
 	"gadget-marketplace/middleware"
 
 	"github.com/labstack/echo/v4"
+	echoSwagger "github.com/swaggo/echo-swagger"
 )
 
 func SetupRouter(
@@ -16,6 +18,9 @@ func SetupRouter(
 	orderHandler *handler.OrderHandler,
 	aiHandler *handler.AIHandler,
 ) {
+	// Mount Swagger UI Documentation
+	e.GET("/swagger/*", echoSwagger.WrapHandler)
+
 	api := e.Group("/api/v1")
 
 	users := api.Group("/users")
