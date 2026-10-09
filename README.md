@@ -1,6 +1,6 @@
 # Gadget Marketplace & Rental API
 
-API Backend RESTful untuk platform jual-beli dan penyewaan gadget. Dibuat menggunakan Go (Golang) dengan framework Echo v4, terintegrasi dengan Supabase PostgreSQL, Google Gemini AI, dan Mailjet Email Relay.
+API Backend RESTful untuk platform jual-beli gadget. Dibuat menggunakan Go (Golang) dengan framework Echo v4, terintegrasi dengan Supabase PostgreSQL, Google Gemini AI, dan Mailjet Email Relay.
 
 ---
 
@@ -12,7 +12,7 @@ API Backend RESTful untuk platform jual-beli dan penyewaan gadget. Dibuat menggu
   - Manajemen profil pengguna.
 
 - **Katalog Gadget & Sinkronisasi**
-  - Pilihan beli atau sewa gadget.
+  - Pilihan beli gadget.
   - Fitur sinkronisasi produk dari 3rd Party API (DummyJSON).
   - Pencarian, filter kategori, dan pagination produk.
 
