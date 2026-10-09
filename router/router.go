@@ -35,7 +35,7 @@ func SetupRouter(
 	orders.POST("/checkout", orderHandler.Checkout)
 	orders.GET("/my-orders", orderHandler.GetUserOrders)
 
-	ai := api.Group("/ai")
+	ai := api.Group("/ai", middleware.JWTAuthMiddleware(cfg.JWTSecret))
 	ai.POST("/recommend", aiHandler.Recommend)
 
 	api.POST("/rent-products", orderHandler.Checkout, middleware.JWTAuthMiddleware(cfg.JWTSecret))
