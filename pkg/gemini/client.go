@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"gadget-marketplace/models"
 )
 
 type GeminiClient struct {
@@ -45,15 +47,26 @@ func NewGeminiClient(apiKey string) *GeminiClient {
 	}
 }
 
-func (c *GeminiClient) GenerateGadgetRecommendation(userPrompt string) (string, error) {
+func (c *GeminiClient) GenerateGadgetRecommendation(userPrompt string, catalog []models.Product) (string, error) {
+	catalogSummary := formatCatalogForAI(catalog)
+
 	if c.apiKey == "" {
-		return c.generateFallbackRecommendation(userPrompt), nil
+		return c.generateFallbackRecommendation(userPrompt, catalog), nil
 	}
 
-	systemContext := "Anda adalah Asisten AI Spesialis Gadget Marketplace yang cerdas, sopan, dan berpengalaman. " +
-		"Tugas Anda adalah memberikan rekomendasi gadget (laptop, smartphone, kamera, console) dan perbandingan harga " +
-		"yang relevan, hemat, serta sesuai dengan kebutuhan dan budget pengguna. Jawab dengan bahasa Indonesia yang jelas, menarik, dan informatif.\n\n" +
-		"Pertanyaan Pengguna: " + userPrompt
+	systemContext := fmt.Sprintf(`Anda adalah Asisten AI Spesialis Gadget Marketplace yang cerdas, sopan, dan berpengalaman.
+
+Berikut adalah KATALOG PRODUK REALS YANG TERSEDIA DAN READY STOCK DI TOKO KAMI SAAT INI:
+%s
+
+Instruksi Penting:
+1. Analisis kebutuhan dan budget pengguna dari pertanyaan mereka.
+2. REKOMENDASIKAN PRODUK YANG TERSEDIA DI KATALOG TOKO KAMI DI ATAS!
+3. Sebutkan Product ID, Nama Produk, Harga (dalam Rp), dan alasan mengapa produk tersebut cocok.
+4. Beritahu pengguna bahwa mereka bisa langsung memesan produk tersebut di marketplace dengan product_id terkait.
+5. Jawab dengan bahasa Indonesia yang ramah, jelas, dan informatif.
+
+Pertanyaan Pengguna: %s`, catalogSummary, userPrompt)
 
 	reqBody := GeminiGenerateRequest{
 		Contents: []GeminiContent{
@@ -80,8 +93,8 @@ func (c *GeminiClient) GenerateGadgetRecommendation(userPrompt string) (string, 
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		log.Printf("Warning: Gemini API connection error (%v). Serving smart fallback recommendation.", err)
-		return c.generateFallbackRecommendation(userPrompt), nil
+		log.Printf("Warning: Gemini API connection error (%v). Serving catalog AI fallback.", err)
+		return c.generateFallbackRecommendation(userPrompt, catalog), nil
 	}
 	defer resp.Body.Close()
 
@@ -91,41 +104,68 @@ func (c *GeminiClient) GenerateGadgetRecommendation(userPrompt string) (string, 
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		log.Printf("Warning: Gemini API returned status %d. Serving smart AI recommendation fallback.", resp.StatusCode)
-		return c.generateFallbackRecommendation(userPrompt), nil
+		log.Printf("Warning: Gemini API returned status %d. Serving catalog AI recommendation fallback.", resp.StatusCode)
+		return c.generateFallbackRecommendation(userPrompt, catalog), nil
 	}
 
 	var geminiResp GeminiGenerateResponse
 	if err := json.Unmarshal(bodyBytes, &geminiResp); err != nil {
-		return c.generateFallbackRecommendation(userPrompt), nil
+		return c.generateFallbackRecommendation(userPrompt, catalog), nil
 	}
 
 	if len(geminiResp.Candidates) > 0 && len(geminiResp.Candidates[0].Content.Parts) > 0 {
 		return geminiResp.Candidates[0].Content.Parts[0].Text, nil
 	}
 
-	return c.generateFallbackRecommendation(userPrompt), nil
+	return c.generateFallbackRecommendation(userPrompt, catalog), nil
 }
 
-func (c *GeminiClient) generateFallbackRecommendation(userPrompt string) string {
+func formatCatalogForAI(catalog []models.Product) string {
+	if len(catalog) == 0 {
+		return "- Katalog toko saat ini belum di-sync."
+	}
+
+	var sb strings.Builder
+	for _, p := range catalog {
+		sb.WriteString(fmt.Sprintf("- Product ID: %d | Nama: %s | Kategori: %s | Brand: %s | Harga: Rp %.0f | Stok: %d unit\n",
+			p.ID, p.Name, p.Category, p.Brand, p.Price, p.Stock))
+	}
+	return sb.String()
+}
+
+func (c *GeminiClient) generateFallbackRecommendation(userPrompt string, catalog []models.Product) string {
+	if len(catalog) == 0 {
+		return "🤖 **Rekomendasi AI Gadget Assistant**:\n\nKatalog toko saat ini masih kosong. Silakan jalankan `POST /api/v1/products/sync` terlebih dahulu untuk mengisi katalog produk toko kami!"
+	}
+
 	lowerPrompt := strings.ToLower(userPrompt)
+	var recommended []models.Product
 
-	if strings.Contains(lowerPrompt, "laptop") {
-		return "🤖 **Rekomendasi AI Gadget Assistant (Kategori Laptop)**:\n\n" +
-			"1. **MacBook Pro M3 / Air M2**: Pilihan terbaik untuk produktivitas, pemograman, dan desain grafis dengan daya tahan baterai hingga 18 jam.\n" +
-			"2. **ASUS ROG Zephyrus G16**: Pilihan gaming & video editing berat dengan GPU RTX dedicated dan layar 165Hz.\n\n" +
-			"💡 *Tips*: Cek katalog gadget kami di `/api/v1/products?category=laptops` untuk melihat ketersediaan stok!"
+	for _, p := range catalog {
+		if strings.Contains(lowerPrompt, strings.ToLower(p.Category)) ||
+			strings.Contains(lowerPrompt, strings.ToLower(p.Name)) ||
+			strings.Contains(lowerPrompt, strings.ToLower(p.Brand)) {
+			recommended = append(recommended, p)
+		}
 	}
 
-	if strings.Contains(lowerPrompt, "hp") || strings.Contains(lowerPrompt, "smartphone") || strings.Contains(lowerPrompt, "iphone") || strings.Contains(lowerPrompt, "samsung") {
-		return "🤖 **Rekomendasi AI Gadget Assistant (Kategori Smartphone)**:\n\n" +
-			"1. **iPhone 15 Pro Max**: Terbaik untuk videografi, performa chip A17 Pro, dan ketahanan bodi titanium.\n" +
-			"2. **Samsung Galaxy S24 Ultra**: Terbaik untuk fotografi zoom 100x, layar Dynamic AMOLED 2X, dan fitur Galaxy AI bawaan.\n\n" +
-			"💡 *Tips*: Cek katalog gadget kami di `/api/v1/products?category=smartphones` untuk diskon dan promo menarik!"
+	if len(recommended) == 0 && len(catalog) > 0 {
+		count := 3
+		if len(catalog) < 3 {
+			count = len(catalog)
+		}
+		recommended = catalog[:count]
 	}
 
-	return "🤖 **Rekomendasi AI Gadget Assistant**:\n\n" +
-		"Berdasarkan preferensi Anda, kami merekomendasikan untuk melihat katalog produk pilihan terbaik kami. " +
-		"Kami menyediakan berbagai pilihan Smartphone, Laptop Gaming, Kamera Mirrorless, dan Aksesoris dengan harga bersaing!\n\n" +
-		"💡 *Gunakan endpoint `/api/v1/products` untuk menjelajahi katalog lengkap kami.*"
+	var sb strings.Builder
+	sb.WriteString("🤖 **Rekomendasi AI Gadget Assistant (Katalog Produk Real Toko Kami)**:\n\n")
+	for i, p := range recommended {
+		sb.WriteString(fmt.Sprintf("%d. **%s** (Brand: %s)\n", i+1, p.Name, p.Brand))
+		sb.WriteString(fmt.Sprintf("   - **Product ID**: %d\n", p.ID))
+		sb.WriteString(fmt.Sprintf("   - **Harga Beli**: Rp %.2f\n", p.Price))
+		sb.WriteString(fmt.Sprintf("   - **Stok Tersedia**: %d unit\n\n", p.Stock))
+	}
+
+	sb.WriteString("💡 *Anda dapat langsung membeli gadget di atas dengan memasukkan Product ID terkait ke endpoint `POST /api/v1/orders/checkout`!*")
+	return sb.String()
 }

@@ -6,6 +6,7 @@ import (
 	"gadget-marketplace/config"
 	"gadget-marketplace/models"
 	"gadget-marketplace/pkg/gemini"
+	"gadget-marketplace/repository"
 )
 
 type AIService interface {
@@ -13,11 +14,13 @@ type AIService interface {
 }
 
 type aiService struct {
+	productRepo  repository.ProductRepository
 	geminiClient *gemini.GeminiClient
 }
 
-func NewAIService(cfg *config.Config) AIService {
+func NewAIService(productRepo repository.ProductRepository, cfg *config.Config) AIService {
 	return &aiService{
+		productRepo:  productRepo,
 		geminiClient: gemini.NewGeminiClient(cfg.GeminiAPIKey),
 	}
 }
@@ -27,7 +30,10 @@ func (s *aiService) GetRecommendation(prompt string) (*models.AIRecommendRespons
 		return nil, errors.New("prompt is required")
 	}
 
-	recommendation, err := s.geminiClient.GenerateGadgetRecommendation(prompt)
+	// Fetch live product catalog from database
+	catalog, _ := s.productRepo.FindAll("")
+
+	recommendation, err := s.geminiClient.GenerateGadgetRecommendation(prompt, catalog)
 	if err != nil {
 		return nil, err
 	}

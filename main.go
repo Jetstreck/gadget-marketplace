@@ -28,7 +28,7 @@ func main() {
 	userService := service.NewUserService(userRepo, emailSvc, cfg)
 	productService := service.NewProductService(productRepo, cfg)
 	orderService := service.NewOrderService(orderRepo, emailSvc)
-	aiService := service.NewAIService(cfg)
+	aiService := service.NewAIService(productRepo, cfg)
 
 	userHandler := handler.NewUserHandler(userService)
 	productHandler := handler.NewProductHandler(productService)
