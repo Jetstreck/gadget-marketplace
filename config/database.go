@@ -15,12 +15,20 @@ func InitDB(cfg *Config) *gorm.DB {
 	var err error
 
 	if cfg.DBDriver == "postgres" {
-		createPostgresDBIfNotExists(cfg)
+		if cfg.DBName != "postgres" {
+			createPostgresDBIfNotExists(cfg)
+		}
 
 		dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=%s",
 			cfg.DBHost, cfg.DBUser, cfg.DBPassword, cfg.DBName, cfg.DBPort, cfg.DBSSLMode)
 
-		db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
+		db, err = gorm.Open(postgres.New(postgres.Config{
+			DSN:                  dsn,
+			PreferSimpleProtocol: true,
+		}), &gorm.Config{
+			PrepareStmt: false,
+		})
+
 		if err != nil {
 			log.Fatalf("Fatal: Failed to connect to PostgreSQL database '%s': %v", cfg.DBName, err)
 		}
@@ -42,7 +50,12 @@ func createPostgresDBIfNotExists(cfg *Config) {
 	defaultDSN := fmt.Sprintf("host=%s user=%s password=%s dbname=postgres port=%s sslmode=%s",
 		cfg.DBHost, cfg.DBUser, cfg.DBPassword, cfg.DBPort, cfg.DBSSLMode)
 
-	db, err := gorm.Open(postgres.Open(defaultDSN), &gorm.Config{})
+	db, err := gorm.Open(postgres.New(postgres.Config{
+		DSN:                  defaultDSN,
+		PreferSimpleProtocol: true,
+	}), &gorm.Config{
+		PrepareStmt: false,
+	})
 	if err != nil {
 		log.Printf("Note: Could not connect to default postgres DB for auto-creation: %v", err)
 		return
