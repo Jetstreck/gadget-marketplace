@@ -24,14 +24,16 @@ func NewEmailService(cfg *config.Config) EmailService {
 
 func (s *emailService) sendMail(toEmail, subject, bodyHTML string) error {
 	if s.cfg.SMTPUser == "" || s.cfg.SMTPPassword == "" {
-		log.Printf("[EMAIL NOTIFICATION SIMULATED] To: %s | Subject: %s | Message: Email notification triggered successfully! (Set SMTP_USER and SMTP_PASSWORD in .env for Mailjet/Mailtrap/Inboxes delivery)", toEmail, subject)
+		log.Printf("[EMAIL NOTIFICATION SIMULATED] To: %s | Subject: %s | Message: Email notification triggered successfully!", toEmail, subject)
 		return nil
 	}
 
 	auth := smtp.PlainAuth("", s.cfg.SMTPUser, s.cfg.SMTPPassword, s.cfg.SMTPHost)
 
+	fromHeader := fmt.Sprintf("\"Gadget Marketplace\" <%s>", s.cfg.SenderEmail)
+
 	headers := make(map[string]string)
-	headers["From"] = s.cfg.SenderEmail
+	headers["From"] = fromHeader
 	headers["To"] = toEmail
 	headers["Subject"] = subject
 	headers["MIME-Version"] = "1.0"
@@ -50,7 +52,7 @@ func (s *emailService) sendMail(toEmail, subject, bodyHTML string) error {
 		return err
 	}
 
-	log.Printf("Email successfully sent to %s via Mailjet/Mailtrap/Inboxes SMTP", toEmail)
+	log.Printf("Email successfully sent to %s via Mailjet SMTP (From: Gadget Marketplace)", toEmail)
 	return nil
 }
 
