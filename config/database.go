@@ -7,7 +7,6 @@ import (
 	"gadget-marketplace/models"
 
 	"gorm.io/driver/postgres"
-	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
 
@@ -16,26 +15,18 @@ func InitDB(cfg *Config) *gorm.DB {
 	var err error
 
 	if cfg.DBDriver == "postgres" {
+		createPostgresDBIfNotExists(cfg)
+
 		dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=%s",
 			cfg.DBHost, cfg.DBUser, cfg.DBPassword, cfg.DBName, cfg.DBPort, cfg.DBSSLMode)
 
 		db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
 		if err != nil {
-			log.Printf("Warning: Failed to connect to PostgreSQL (%v). Falling back to SQLite local database...", err)
-			db, err = gorm.Open(sqlite.Open("gadget_marketplace.db"), &gorm.Config{})
-			if err != nil {
-				log.Fatalf("Fatal: Failed to connect to fallback SQLite database: %v", err)
-			}
-			log.Println("Connected successfully to SQLite local database (gadget_marketplace.db)")
-		} else {
-			log.Println("Connected successfully to PostgreSQL database!")
+			log.Fatalf("Fatal: Failed to connect to PostgreSQL database '%s': %v", cfg.DBName, err)
 		}
+		log.Println("Connected successfully to PostgreSQL database!")
 	} else {
-		db, err = gorm.Open(sqlite.Open("gadget_marketplace.db"), &gorm.Config{})
-		if err != nil {
-			log.Fatalf("Fatal: Failed to connect to SQLite database: %v", err)
-		}
-		log.Println("Connected successfully to SQLite database")
+		log.Fatalf("Fatal: Invalid DB_DRIVER configuration: %s", cfg.DBDriver)
 	}
 
 	err = db.AutoMigrate(&models.User{}, &models.Product{}, &models.Order{})
@@ -45,4 +36,31 @@ func InitDB(cfg *Config) *gorm.DB {
 
 	log.Println("Database Auto-Migration completed successfully!")
 	return db
+}
+
+func createPostgresDBIfNotExists(cfg *Config) {
+	defaultDSN := fmt.Sprintf("host=%s user=%s password=%s dbname=postgres port=%s sslmode=%s",
+		cfg.DBHost, cfg.DBUser, cfg.DBPassword, cfg.DBPort, cfg.DBSSLMode)
+
+	db, err := gorm.Open(postgres.Open(defaultDSN), &gorm.Config{})
+	if err != nil {
+		log.Printf("Note: Could not connect to default postgres DB for auto-creation: %v", err)
+		return
+	}
+
+	var count int
+	db.Raw("SELECT count(*) FROM pg_database WHERE datname = ?", cfg.DBName).Scan(&count)
+	if count == 0 {
+		log.Printf("Database '%s' does not exist in PostgreSQL. Auto-creating database '%s'...", cfg.DBName, cfg.DBName)
+		if err := db.Exec(fmt.Sprintf("CREATE DATABASE \"%s\";", cfg.DBName)).Error; err != nil {
+			log.Printf("Warning: Auto-creation of database failed: %v", err)
+		} else {
+			log.Printf("Successfully created PostgreSQL database '%s'!", cfg.DBName)
+		}
+	}
+
+	sqlDB, _ := db.DB()
+	if sqlDB != nil {
+		sqlDB.Close()
+	}
 }
